@@ -110,9 +110,14 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
   // every render) so the preview stays stable while the player looks at it.
   const previewItems = useMemo(() => {
     if (!active) return [];
+    // Two rolls per rarity tier instead of one, so the preview actually
+    // looks like a case full of stuff rather than a bare price list.
     return [...active.pool]
       .sort((a, b) => a.seed - b.seed)
-      .map((tier, i) => makeItem(tier.seed, `preview-${active.id}-${i}`));
+      .flatMap((tier, i) => [
+        makeItem(tier.seed, `preview-${active.id}-${i}a`),
+        makeItem(tier.seed, `preview-${active.id}-${i}b`),
+      ]);
   }, [active?.id]);
   const multiRemaining = multiWon.filter((it) => !soldIds.has(it.id));
 
