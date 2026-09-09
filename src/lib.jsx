@@ -43,6 +43,7 @@ const WEAPONS = [
 const FINISHES = [
   "Неон", "Полночь", "Кровавый закат", "Королевский узор", "Ржавчина", "Штиль",
   "Хищник", "Пламя ядра", "Ледяной раскол", "Пустынный мираж", "Багрянец", "Листопад",
+  "Электрошок", "Полуночный шторм", "Золотая лихорадка", "Тропический шторм", "Обсидиан", "Ядовитый плющ",
 ];
 const WEARS = [
   { label: "Прямо с завода", mult: 1.18 },
@@ -102,6 +103,29 @@ const sfx = {
   tick: () => beep(680 + Math.random() * 60, 0.035, "square", 0.06),
   win: () => { beep(660, 0.1, "triangle", 0.14); setTimeout(() => beep(880, 0.16, "triangle", 0.14), 90); },
   lose: () => beep(160, 0.22, "sine", 0.12),
+  // One continuous, pitch-descending tone for the whole spin instead of
+  // discrete ticks — sounds like a wheel winding down rather than a
+  // machine-gun of clicks. Returns a stop() you can call early if needed.
+  spin: (durationMs) => {
+    if (!soundEnabled) return () => {};
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+      const dur = durationMs / 1000;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = "sine";
+      o.frequency.setValueAtTime(560, now);
+      o.frequency.exponentialRampToValueAtTime(80, now + dur);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(0.075, now + Math.min(0.25, dur * 0.08));
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now);
+      o.stop(now + dur + 0.05);
+      return () => { try { o.stop(); } catch {} };
+    } catch { return () => {}; }
+  },
 };
 
 /* ---------------------------------- artwork ---------------------------------- */
@@ -356,8 +380,8 @@ function ConfettiBurst({ trigger, colors }) {
 }
 
 /* ---------------------------------- data ---------------------------------- */
-const CATALOG = [15, 30, 55, 90, 150, 240, 380, 600, 950, 1500, 2400, 3800, 6000, 9500, 15000]
-  .flatMap((s, i) => [makeItem(s, `cat-${i}a`), makeItem(s, `cat-${i}b`), makeItem(s, `cat-${i}c`)])
+const CATALOG = [12, 16, 21, 28, 37, 49, 65, 86, 114, 150, 200, 265, 350, 465, 615, 815, 1080, 1430, 1890, 2500, 3300, 4400, 5800, 7700, 10200, 13500, 18000, 24000]
+  .flatMap((s, i) => [makeItem(s, `cat-${i}a`), makeItem(s, `cat-${i}b`), makeItem(s, `cat-${i}c`), makeItem(s, `cat-${i}d`)])
   .sort((a, b) => a.value - b.value);
 
 const CASES = [
@@ -386,6 +410,30 @@ function weightedPick(pool) {
   return pool[0];
 }
 const fmt = (n) => (n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(2) + "K" : Math.round(n).toString());
+
+/* ---------------------------------- levels ---------------------------------- */
+// Cumulative XP required to REACH level N+2 (index 0 -> level 2, etc).
+// Curve grows a bit faster than linear so later levels take meaningfully longer.
+const LEVEL_THRESHOLDS = Array.from({ length: 60 }, (_, i) => Math.round(120 * Math.pow(i + 1, 1.32)));
+
+// How much XP a case is worth — roughly proportional to its price, so
+// expensive cases matter more but cheap ones aren't worthless.
+function xpForCase(cost) { return Math.max(3, Math.round(cost / 6)); }
+
+function levelForXp(xp) {
+  let lvl = 1;
+  for (const t of LEVEL_THRESHOLDS) { if (xp >= t) lvl++; else break; }
+  return lvl;
+}
+function levelProgress(xp) {
+  const lvl = levelForXp(xp);
+  const prev = lvl === 1 ? 0 : LEVEL_THRESHOLDS[lvl - 2];
+  const next = LEVEL_THRESHOLDS[lvl - 1] ?? prev + 999999;
+  const pct = Math.max(0, Math.min(100, Math.round(((xp - prev) / (next - prev)) * 100)));
+  return { lvl, prev, next, pct, isMax: lvl > LEVEL_THRESHOLDS.length };
+}
+// Coin prize awarded the moment a player crosses into a new level.
+function levelPrize(lvl) { return lvl * 120; }
 
 /* ---------------------------------- backend ---------------------------------- */
 const SUPABASE_URL = "https://sjyrjeaghkkqkpkhlhhv.supabase.co";
@@ -421,6 +469,23 @@ async function fetchLeaderboard() {
   });
   if (!res.ok) throw new Error("leaderboard fetch failed");
   return res.json();
+}
+
+// Cosmetic on the client — only decides whether to render the admin tab at
+// all. The real gate lives server-side in telegram-sync (checks the verified
+// Telegram ID before doing anything), so this constant being visible in the
+// bundle isn't a security issue.
+const ADMIN_TELEGRAM_ID = 721141865;
+
+async function adminSync(action, initData, extra) {
+  const res = await fetch(`${SYNC_FN}/admin`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
+    body: JSON.stringify({ action, initData, ...extra }),
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "admin request failed");
+  return data;
 }
 
 /* ---------------------------------- shared UI ---------------------------------- */
@@ -557,6 +622,8 @@ export {
   C, RARITY, rarityForValue, WEAPONS, FINISHES, WEARS, makeItem,
   sfx, WeaponGlyph, CrateArt, Case3D, ItemBadge, SparkField, ConfettiBurst,
   CATALOG, CASES, weightedPick, fmt,
+  xpForCase, levelForXp, levelProgress, levelPrize,
   SUPABASE_URL, SUPABASE_ANON_KEY, BOT_USERNAME, serverSync, battleSync, fetchLeaderboard,
+  ADMIN_TELEGRAM_ID, adminSync,
   LogoMark, AppHeader, TopBar, ITEM_W, REEL_LEN, WIN_INDEX, CaseTile,
 };

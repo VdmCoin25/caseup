@@ -111,7 +111,10 @@ function UpgradeScreen({ inventory, setInventory }) {
   const stake = phase === "idle" ? liveStake : lockedStake;
   const target = CATALOG.find((i) => i.id === targetId) || null;
   const chance = stake && target ? Math.max(1, Math.min(92, (stake.value / target.value) * 100 * 0.92)) : 0;
-  const targets = liveStake ? CATALOG.filter((c) => c.value > liveStake.value * 1.15 && c.value < liveStake.value * 20) : CATALOG;
+  // Every catalog item above the stake's value is a fair upgrade target —
+  // no artificial 20x ceiling. Together with the denser catalog this is what
+  // makes the 30/50/75% presets land close to the number on the button.
+  const targets = liveStake ? CATALOG.filter((c) => c.value > liveStake.value * 1.03) : CATALOG;
 
   const applyPreset = (p) => {
     if (!liveStake) return;
@@ -151,13 +154,9 @@ function UpgradeScreen({ inventory, setInventory }) {
         el.style.transform = `rotate(${(5 + ((Math.random() * 2) | 0)) * 360 + relative}deg)`;
       });
     }
-    // ticking sound that spaces out over time, like a wheel slowing down
-    const TICKS = 30;
-    for (let i = 1; i <= TICKS; i++) {
-      const p = i / TICKS;
-      const at = SPIN_MS * (1 - Math.pow(1 - p, 2));
-      timers.current.push(setTimeout(() => sfx.tick(), at));
-    }
+    // one smooth, pitch-descending tone for the whole spin instead of
+    // discrete ticks — sounds like a wheel winding down, not a machine gun
+    sfx.spin(SPIN_MS);
 
     timers.current.push(setTimeout(() => {
       const { win: w, target: t } = pending.current;

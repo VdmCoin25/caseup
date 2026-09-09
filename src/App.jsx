@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Package, Swords, TrendingUp, Crosshair, Layers, User } from "lucide-react";
-import { C, sfx, SparkField, AppHeader, serverSync, registerRerender } from "./lib.jsx";
+import { Package, Swords, TrendingUp, Crosshair, Layers, User, ShieldCheck } from "lucide-react";
+import { C, sfx, SparkField, AppHeader, serverSync, registerRerender, ADMIN_TELEGRAM_ID, xpForCase, levelForXp, levelPrize } from "./lib.jsx";
 import { CasesScreen } from "./CasesScreen.jsx";
 import { BattleScreen } from "./BattleScreen.jsx";
 import { UpgradeScreen } from "./UpgradeScreen.jsx";
 import { RangeScreen } from "./RangeScreen.jsx";
 import { InventoryScreen } from "./InventoryScreen.jsx";
 import { ProfileScreen } from "./ProfileScreen.jsx";
+import { AdminScreen } from "./AdminScreen.jsx";
 
 /* ---------------------------------- root ---------------------------------- */
 export default function App() {
@@ -16,6 +17,8 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [spent, setSpent] = useState(0);
   const [opened, setOpened] = useState(0);
+  const [xp, setXp] = useState(0);
+  const [levelUpMsg, setLevelUpMsg] = useState("");
   const [referralCount, setReferralCount] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -57,6 +60,7 @@ export default function App() {
           setHistory(player.history || []);
           setSpent(player.spent || 0);
           setOpened(player.opened_count || 0);
+          setXp(player.xp || 0);
           setReferralCount(player.referral_count || 0);
           setLoaded(true); // only allow saving after a real, successful load —
           // otherwise a failed load would leave local defaults (900 coins, empty
@@ -83,18 +87,32 @@ export default function App() {
     if (tgUser && initDataRef.current) {
       const t = setTimeout(() => {
         const best = history.reduce((a, b) => (!a || b.item.value > a.item.value ? b : a), null);
-        serverSync("save", initDataRef.current, { coins, inventory, history: history.slice(-300), spent, opened, bestDrop: best })
+        serverSync("save", initDataRef.current, { coins, inventory, history: history.slice(-300), spent, opened, xp, bestDrop: best })
           .catch((e) => console.error("sync save failed:", e.message));
       }, 1200);
       return () => clearTimeout(t);
     }
-    try { window.storage?.set("drop-history", JSON.stringify({ history: history.slice(-300), spent, opened }), false); } catch {}
-  }, [coins, inventory, history, spent, opened, loaded, tgUser]);
+    try { window.storage?.set("drop-history", JSON.stringify({ history: history.slice(-300), spent, opened, xp }), false); } catch {}
+  }, [coins, inventory, history, spent, opened, xp, loaded, tgUser]);
 
   const onDrop = (item, caseDef) => {
     setHistory((h) => [...h, { id: `h-${Date.now()}-${Math.random()}`, item, caseName: caseDef.name, ts: Date.now() }]);
     setSpent((s) => s + caseDef.cost);
     setOpened((o) => o + 1);
+    setXp((prevXp) => {
+      const nextXp = prevXp + xpForCase(caseDef.cost);
+      const oldLvl = levelForXp(prevXp);
+      const newLvl = levelForXp(nextXp);
+      if (newLvl > oldLvl) {
+        let prize = 0;
+        for (let l = oldLvl + 1; l <= newLvl; l++) prize += levelPrize(l);
+        setCoins((c) => c + prize);
+        sfx.win();
+        setLevelUpMsg(`Уровень ${newLvl}! +${prize} монет`);
+        setTimeout(() => setLevelUpMsg(""), 3500);
+      }
+      return nextXp;
+    });
   };
 
   const tabs = [
@@ -104,6 +122,7 @@ export default function App() {
     { id: "range", label: "Тир", icon: Crosshair },
     { id: "inv", label: "Вещи", icon: Layers },
     { id: "profile", label: "Профиль", icon: User },
+    ...(tgUser?.id === ADMIN_TELEGRAM_ID ? [{ id: "admin", label: "Админ", icon: ShieldCheck }] : []),
   ];
 
   return (
@@ -120,13 +139,19 @@ export default function App() {
           </button>
         </div>
       )}
+      {levelUpMsg && (
+        <div className="relative z-30 flex items-center justify-center gap-2 px-3 py-2" style={{ background: `${C.gold}22`, borderBottom: `1px solid ${C.gold}55` }}>
+          <span className="text-[12px] font-bold" style={{ color: C.gold }}>{levelUpMsg}</span>
+        </div>
+      )}
       <div key={tab} className="flex-1 min-h-0 relative z-10 screen-enter">
         {tab === "cases" && <CasesScreen coins={coins} setCoins={setCoins} addItem={addItem} removeItem={removeItem} onDrop={onDrop} />}
-        {tab === "battle" && <BattleScreen coins={coins} setCoins={setCoins} setInventory={setInventory} tgUser={tgUser} initData={initDataRef.current} />}
+        {tab === "battle" && <BattleScreen coins={coins} setCoins={setCoins} addItem={addItem} tgUser={tgUser} initData={initDataRef.current} />}
         {tab === "upgrade" && <UpgradeScreen inventory={inventory} setInventory={setInventory} />}
         {tab === "range" && <RangeScreen coins={coins} setCoins={setCoins} />}
         {tab === "inv" && <InventoryScreen inventory={inventory} setInventory={setInventory} setCoins={setCoins} coins={coins} />}
-        {tab === "profile" && <ProfileScreen coins={coins} history={history} spent={spent} opened={opened} tgUser={tgUser} referralCount={referralCount} />}
+        {tab === "profile" && <ProfileScreen coins={coins} history={history} spent={spent} opened={opened} xp={xp} tgUser={tgUser} referralCount={referralCount} />}
+        {tab === "admin" && tgUser?.id === ADMIN_TELEGRAM_ID && <AdminScreen initData={initDataRef.current} />}
       </div>
       <div className="relative z-30 flex items-center justify-around py-3 px-0.5" style={{ background: C.bgElevated, borderTop: `1px solid ${C.border}` }}>
         {tabs.map(({ id, label, icon: Icon }) => {

@@ -1,56 +1,86 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Users, Swords, Loader2, Trophy, X } from "lucide-react";
+import { Users, Swords, Loader2, Trophy, Check } from "lucide-react";
 import { C, sfx, ItemBadge, CrateArt, CASES, fmt, TopBar, battleSync } from "./lib.jsx";
 
-function BattleScreen({ coins, setCoins, setInventory, tgUser, initData }) {
+function BattleScreen({ coins, setCoins, addItem, tgUser, initData }) {
   const [pick, setPick] = useState(null);
-  const [phase, setPhase] = useState("setup"); // setup | searching | live | done
+  const [phase, setPhase] = useState("setup"); // setup | searching | lobby | opening | done
   const [room, setRoom] = useState(null);
   const [error, setError] = useState("");
+  const [myReady, setMyReady] = useState(false);
   const pollRef = useRef(null);
-  const revealedRef = useRef(false);
+  const openedRef = useRef(false);
 
   useEffect(() => () => clearInterval(pollRef.current), []);
+
+  const startPolling = (roomId) => {
+    clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const updated = await battleSync("get", initData, { roomId });
+        if (!updated) return;
+        setRoom(updated);
+        if (updated.status === "matched") setPhase((p) => (p === "searching" ? "lobby" : p));
+        if (updated.status === "done") {
+          clearInterval(pollRef.current);
+          if (!openedRef.current) { openedRef.current = true; setPhase("opening"); }
+        }
+      } catch {}
+    }, 1200);
+  };
 
   const startSearch = async (c) => {
     if (!tgUser || !initData) { setError("Открой это внутри Telegram, чтобы играть онлайн"); return; }
     if (coins < c.cost) { setError("Недостаточно монет"); return; }
-    setPick(c); setError(""); setPhase("searching"); revealedRef.current = false;
+    setPick(c); setError(""); setMyReady(false); openedRef.current = false;
     try {
       const r = await battleSync("enter", initData, { caseId: c.id });
       setRoom(r);
       setCoins((v) => v - c.cost);
-      if (r.status === "ready") setPhase("live");
-      pollRef.current = setInterval(async () => {
-        try {
-          const updated = await battleSync("get", initData, { roomId: r.id });
-          if (!updated) return;
-          setRoom(updated);
-          if (updated.status === "ready" && phase !== "live") setPhase("live");
-          if (updated.status === "done") { clearInterval(pollRef.current); setPhase("done"); }
-        } catch {}
-      }, 1500);
+      setPhase(r.status === "matched" ? "lobby" : "searching");
+      startPolling(r.id);
     } catch (e) {
       setError(e.message); setPhase("setup");
     }
   };
 
-  useEffect(() => {
-    if (phase === "live" && room && !revealedRef.current) {
-      revealedRef.current = true;
-      sfx.open();
-      battleSync("reveal", initData, { roomId: room.id, caseId: pick.id }).then((r) => {
-        setRoom(r);
-        if (r.status === "done") { clearInterval(pollRef.current); setPhase("done"); }
-      }).catch((e) => setError(e.message));
+  const pressReady = async () => {
+    if (!room || myReady) return;
+    setMyReady(true);
+    sfx.tap();
+    try {
+      const r = await battleSync("ready", initData, { roomId: room.id });
+      setRoom(r);
+      if (r.status === "done" && !openedRef.current) {
+        openedRef.current = true;
+        clearInterval(pollRef.current);
+        setPhase("opening");
+      }
+    } catch (e) {
+      setError(e.message);
     }
-  }, [phase, room?.id]);
+  };
 
+  // Local "opening" beat: both clients hit this at roughly the same time
+  // (the winner was already decided server-side the instant both pressed
+  // ready), so this is purely a shared-feeling animation before the reveal.
+  // If I won, the server already merged both items into my server-side
+  // inventory — mirror that into local state too, otherwise the next
+  // periodic save would push my (stale) local inventory back and wipe out
+  // the win.
   useEffect(() => {
-    if (phase === "done" && room) {
-      const iWon = room.winner_id === tgUser?.id;
+    if (phase !== "opening") return;
+    sfx.open();
+    const t = setTimeout(() => {
+      const iWon = room?.winner_id === tgUser?.id;
+      if (iWon && room?.p1_item && room?.p2_item) {
+        addItem(room.p1_id === tgUser?.id ? room.p1_item : room.p2_item);
+        addItem(room.p1_id === tgUser?.id ? room.p2_item : room.p1_item);
+      }
       iWon ? sfx.win() : sfx.lose();
-    }
+      setPhase("done");
+    }, 1800);
+    return () => clearTimeout(t);
   }, [phase]);
 
   const cancel = async () => {
@@ -67,7 +97,7 @@ function BattleScreen({ coins, setCoins, setInventory, tgUser, initData }) {
         <TopBar sub="Кейсбатл · Онлайн" title="Забирает победитель" />
         <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl" style={{ background: C.bgElevated, border: `1px solid ${C.border}` }}>
           <Users size={14} color={C.textDim} />
-          <span className="text-[11px]" style={{ color: C.textDim }}>Против живого игрока — оба открывают один кейс, кому больше выпало — забирает оба предмета</span>
+          <span className="text-[11px]" style={{ color: C.textDim }}>Против живого игрока — оба жмут «Готов» в лобби, кейсы открываются синхронно, победитель забирает оба предмета</span>
         </div>
         {error && <div className="text-[12px] mb-3 px-3 py-2 rounded-lg" style={{ background: `${C.danger}22`, color: C.danger, border: `1px solid ${C.danger}55` }}>{error}</div>}
         <div className="grid grid-cols-2 gap-2.5 pb-4">
@@ -103,27 +133,59 @@ function BattleScreen({ coins, setCoins, setInventory, tgUser, initData }) {
   }
 
   const p1Me = room?.p1_id === tgUser?.id;
-  const me = p1Me ? { name: room.p1_name, item: room.p1_item } : { name: room.p2_name, item: room.p2_item };
-  const opp = p1Me ? { name: room.p2_name, item: room.p2_item } : { name: room.p1_name, item: room.p1_item };
-  const iWon = phase === "done" && room?.winner_id === tgUser?.id;
+  const myName = p1Me ? room?.p1_name : room?.p2_name;
+  const oppName = p1Me ? room?.p2_name : room?.p1_name;
+  const myReadyFlag = p1Me ? room?.p1_ready : room?.p2_ready;
+  const oppReadyFlag = p1Me ? room?.p2_ready : room?.p1_ready;
+  const myItem = p1Me ? room?.p1_item : room?.p2_item;
+  const oppItem = p1Me ? room?.p2_item : room?.p1_item;
+  const iWon = (phase === "opening" || phase === "done") && room?.winner_id === tgUser?.id;
+
+  if (phase === "lobby") {
+    return (
+      <div className="flex flex-col h-full px-4 pt-5 pb-2">
+        <TopBar sub={pick?.name} title="Лобби" />
+        <div className="flex-1 flex flex-col justify-center gap-3">
+          {[["Вы", myName, myReadyFlag || myReady], ["Соперник", oppName, oppReadyFlag]].map(([label, name, ready], i) => (
+            <div key={i} className="rounded-2xl p-4 flex items-center gap-3" style={{ background: C.bgElevated, border: `1.5px solid ${ready ? C.gold : C.border}` }}>
+              <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: C.bgCard, border: `1px solid ${ready ? C.gold : C.border}` }}>
+                {ready ? <Check size={18} color={C.gold} /> : <Users size={16} color={C.textDim} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] uppercase tracking-wide" style={{ color: C.textDim }}>{label}</div>
+                <div className="text-[13px] font-semibold truncate" style={{ color: C.text }}>{name || "Игрок"}</div>
+              </div>
+              <div className="text-[11px] font-semibold flex-shrink-0" style={{ color: ready ? C.gold : C.textDim }}>
+                {ready ? "Готов" : "Ждём"}
+              </div>
+            </div>
+          ))}
+        </div>
+        <button onClick={pressReady} disabled={myReady} className="w-full rounded-xl py-4 font-bold tracking-wide mt-3"
+          style={{ background: myReady ? C.bgCard : `linear-gradient(180deg, ${C.emberHot}, ${C.ember})`, color: myReady ? C.gold : C.bgDeep, border: myReady ? `1px solid ${C.gold}55` : "none" }}>
+          {myReady ? "Ждём соперника…" : "Готов"}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full px-4 pt-5 pb-2">
       <TopBar sub={pick?.name} title={phase === "done" ? "Итог" : "Батл идёт"} />
       <div className="flex-1 flex flex-col justify-center gap-3">
-        {[me, opp].map((p, i) => (
+        {[{ label: "Вы", name: myName, item: myItem, mine: true }, { label: "Соперник", name: oppName, item: oppItem, mine: false }].map((p, i) => (
           <div key={i} className="rounded-2xl p-4 flex flex-col items-center gap-2"
-            style={{ background: C.bgElevated, border: `1.5px solid ${phase === "done" && ((i === 0) === iWon) ? C.gold : C.border}` }}>
-            <div className="text-[12px] font-semibold" style={{ color: i === 0 ? C.ember : C.textDim }}>{i === 0 ? "Вы" : p.name || "Соперник"}</div>
-            {p.item ? (
+            style={{ background: C.bgElevated, border: `1.5px solid ${phase === "done" && (p.mine === iWon) ? C.gold : C.border}` }}>
+            <div className="text-[12px] font-semibold" style={{ color: p.mine ? C.ember : C.textDim }}>{p.mine ? "Вы" : p.name || "Соперник"}</div>
+            {phase === "done" && p.item ? (
               <>
                 <ItemBadge item={p.item} size={56} />
                 <div className="text-[13px] font-bold" style={{ color: p.item.rarity.color }}>{fmt(p.item.value)}</div>
               </>
             ) : (
-              <Loader2 size={22} color={C.textDim} className="animate-spin my-2" />
+              <div className="py-2"><Loader2 size={22} color={C.textDim} className="animate-spin" /></div>
             )}
-            {phase === "done" && (i === 0) === iWon && <Trophy size={16} color={C.gold} />}
+            {phase === "done" && (p.mine === iWon) && <Trophy size={16} color={C.gold} />}
           </div>
         ))}
       </div>
@@ -139,7 +201,5 @@ function BattleScreen({ coins, setCoins, setInventory, tgUser, initData }) {
     </div>
   );
 }
-
-/* ---------------------------------- range ---------------------------------- */
 
 export { BattleScreen };

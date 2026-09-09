@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Coins, Search, Zap } from "lucide-react";
 import { C, RARITY, sfx, ItemBadge, Case3D, ConfettiBurst, CASES, weightedPick, makeItem, fmt, TopBar, ITEM_W, REEL_LEN, WIN_INDEX, CaseTile } from "./lib.jsx";
 
@@ -105,6 +105,15 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
 
   const filtered = CASES.filter((c) => c.name.toLowerCase().includes(q.toLowerCase()));
   const multiTotal = multiWon.reduce((s, it) => s + it.value, 0);
+
+  // One representative item per pool tier, generated once per case (not on
+  // every render) so the preview stays stable while the player looks at it.
+  const previewItems = useMemo(() => {
+    if (!active) return [];
+    return [...active.pool]
+      .sort((a, b) => a.seed - b.seed)
+      .map((tier, i) => makeItem(tier.seed, `preview-${active.id}-${i}`));
+  }, [active?.id]);
   const multiRemaining = multiWon.filter((it) => !soldIds.has(it.id));
 
   if (!active) {
@@ -211,13 +220,14 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
         </button>
       </div>
 
-      <div className="text-[10px] tracking-[0.14em] uppercase mb-1.5" style={{ color: C.textDim }}>Содержимое</div>
-      <div className="flex gap-1.5 flex-wrap pb-4">
-        {RARITY.map((r) => (
-          <div key={r.id} className="flex items-center gap-1.5 px-2 py-1 rounded-lg"
-            style={{ background: C.bgElevated, border: `1px solid ${r.color}30` }}>
-            <div className="w-2 h-2 rounded-full" style={{ background: r.color }} />
-            <span className="text-[9px]" style={{ color: C.textDim }}>{r.label}</span>
+      <div className="text-[10px] tracking-[0.14em] uppercase mb-1.5" style={{ color: C.textDim }}>Что может выпасть</div>
+      <div className="grid grid-cols-3 gap-2 pb-4">
+        {previewItems.map((it, i) => (
+          <div key={i} className="rounded-xl p-2 flex flex-col items-center gap-1"
+            style={{ background: C.bgElevated, border: `1px solid ${it.rarity.color}33` }}>
+            <ItemBadge item={it} size={36} />
+            <div className="text-[9px] text-center leading-tight truncate w-full" style={{ color: C.textDim }}>{it.short}</div>
+            <div className="text-[10px] font-bold" style={{ color: it.rarity.color }}>{fmt(it.value)}</div>
           </div>
         ))}
       </div>

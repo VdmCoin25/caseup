@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { User, Gift, Copy } from "lucide-react";
-import { C, ItemBadge, fmt, TopBar, BOT_USERNAME, fetchLeaderboard } from "./lib.jsx";
+import { User, Gift, Copy, Star } from "lucide-react";
+import { C, ItemBadge, fmt, TopBar, BOT_USERNAME, fetchLeaderboard, levelProgress } from "./lib.jsx";
 
 function timeAgo(ts) {
   const s = Math.max(1, Math.round((Date.now() - ts) / 1000));
@@ -10,7 +10,7 @@ function timeAgo(ts) {
   return `${Math.round(h / 24)}д назад`;
 }
 
-function ProfileScreen({ coins, history, spent, opened, tgUser, referralCount }) {
+function ProfileScreen({ coins, history, spent, opened, xp, tgUser, referralCount }) {
   const [view, setView] = useState("me"); // me | top
   const [board, setBoard] = useState(null);
   const [boardErr, setBoardErr] = useState("");
@@ -54,6 +54,22 @@ function ProfileScreen({ coins, history, spent, opened, tgUser, referralCount })
             <div className="min-w-0">
               <div className="text-[13px] font-semibold truncate" style={{ color: C.text }}>{tgUser ? tgUser.first_name : "Гость"}</div>
               <div className="text-[10px]" style={{ color: C.textDim }}>{tgUser ? `Telegram ID: ${tgUser.id}` : "Открой это в Telegram, чтобы связать аккаунт"}</div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl p-3.5 mb-4" style={{ background: C.bgElevated, border: `1px solid ${C.gold}44` }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <Star size={14} color={C.gold} />
+                <span className="text-[13px] font-bold" style={{ color: C.text }}>Уровень {levelProgress(xp || 0).lvl}</span>
+              </div>
+              <span className="text-[10px]" style={{ color: C.textDim }}>{fmt(xp || 0)} XP</span>
+            </div>
+            <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: C.bgInset }}>
+              <div className="h-full rounded-full" style={{ width: `${levelProgress(xp || 0).pct}%`, background: `linear-gradient(90deg, ${C.ember}, ${C.gold})` }} />
+            </div>
+            <div className="text-[9px] mt-1.5" style={{ color: C.textDim }}>
+              {levelProgress(xp || 0).isMax ? "Максимальный уровень достигнут" : `До следующего уровня: ${fmt(levelProgress(xp || 0).next - (xp || 0))} XP`}
             </div>
           </div>
 
