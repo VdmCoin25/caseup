@@ -309,6 +309,5 @@ function UpgradeScreen({ inventory, setInventory }) {
     </div>
   );
 }
-/* ---------------------------------- battle (online only) ---------------------------------- */
 
 export { UpgradeScreen };
