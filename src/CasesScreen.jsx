@@ -16,6 +16,13 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
   const [burst, setBurst] = useState(0);
   const trackRef = useRef(null);
   const timers = useRef([]);
+  // Guards against double-invocation from an accidental double-tap: React
+  // state (`phase`) doesn't update synchronously, so two clicks landing in
+  // the same tick before re-render can both slip past a `phase !== "idle"`
+  // check. This ref is set the instant the first click is handled, closing
+  // that window immediately — that's what was causing double charges and
+  // the reel animation getting stomped by a second, overlapping run.
+  const busyRef = useRef(false);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
@@ -43,6 +50,7 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
       });
     }
     timers.current.push(setTimeout(() => {
+      busyRef.current = false;
       setPhase("result");
       if (winItem.rarity.min >= 900) { sfx.win(); setBurst((b) => b + 1); } else sfx.tap();
       // The item is banked immediately, so it can never be lost by closing the
@@ -58,6 +66,7 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
     sfx.open();
     const dur = fast ? 500 : 1500;
     timers.current.push(setTimeout(() => {
+      busyRef.current = false;
       const wonItems = Array.from({ length: qty }, () => rollOne());
       setMultiWon(wonItems);
       setSoldIds(new Set());
@@ -74,7 +83,9 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
   };
 
   const open = () => {
+    if (busyRef.current) return;
     if (!active || coins < totalCost || phase === "spinning" || phase === "burst") return;
+    busyRef.current = true;
     qty === 1 ? openSingle() : openMulti();
   };
 
