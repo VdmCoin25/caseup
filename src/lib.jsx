@@ -31,40 +31,81 @@ const RARITY = [
 ];
 const rarityForValue = (v) => RARITY.reduce((acc, t) => (v >= t.min ? t : acc), RARITY[0]);
 
-const WEAPONS = [
-  { name: "Штурмовая винтовка «Гром»", type: "rifle" },
-  { name: "Снайперская винтовка «Скорпион»", type: "sniper" },
-  { name: "Пистолет «Игла»", type: "pistol" },
-  { name: "Дробовик «Шквал»", type: "shotgun" },
-  { name: "Нож «Клык»", type: "knife" },
-  { name: "СМГ «Оса»", type: "smg" },
-  { name: "Перчатки «Хват»", type: "gloves" },
-];
-const FINISHES = [
-  "Неон", "Полночь", "Кровавый закат", "Королевский узор", "Ржавчина", "Штиль",
-  "Хищник", "Пламя ядра", "Ледяной раскол", "Пустынный мираж", "Багрянец", "Листопад",
-  "Электрошок", "Полуночный шторм", "Золотая лихорадка", "Тропический шторм", "Обсидиан", "Ядовитый плющ",
+// Real, publicly known CS2 weapon + skin name pairs, picked as short
+// (weapon, finish) strings rather than pulled from Valve's API — no Steam
+// calls, no OpenID, nothing that touches their service at all.
+const SKIN_CATALOG = [
+  { type: "rifle",  name: "AK-47 | Redline" },
+  { type: "rifle",  name: "AK-47 | Vulcan" },
+  { type: "rifle",  name: "AK-47 | Case Hardened" },
+  { type: "rifle",  name: "AK-47 | Fire Serpent" },
+  { type: "rifle",  name: "AK-47 | Asiimov" },
+  { type: "rifle",  name: "AK-47 | Neon Rider" },
+  { type: "rifle",  name: "AK-47 | Bloodsport" },
+  { type: "rifle",  name: "AK-47 | Wild Lotus" },
+  { type: "rifle",  name: "M4A4 | Asiimov" },
+  { type: "rifle",  name: "M4A4 | Howl" },
+  { type: "rifle",  name: "M4A4 | Neo-Noir" },
+  { type: "rifle",  name: "M4A4 | The Emperor" },
+  { type: "rifle",  name: "M4A1-S | Hyper Beast" },
+  { type: "rifle",  name: "M4A1-S | Icarus Fell" },
+  { type: "rifle",  name: "M4A1-S | Golden Coil" },
+  { type: "rifle",  name: "FAMAS | Afterimage" },
+  { type: "rifle",  name: "Galil AR | Chatterbox" },
+  { type: "sniper", name: "AWP | Dragon Lore" },
+  { type: "sniper", name: "AWP | Asiimov" },
+  { type: "sniper", name: "AWP | Neo-Noir" },
+  { type: "sniper", name: "AWP | Gungnir" },
+  { type: "sniper", name: "AWP | Hyper Beast" },
+  { type: "sniper", name: "AWP | Wildfire" },
+  { type: "sniper", name: "SSG 08 | Dragonfire" },
+  { type: "pistol", name: "Desert Eagle | Blaze" },
+  { type: "pistol", name: "Desert Eagle | Printstream" },
+  { type: "pistol", name: "Desert Eagle | Code Red" },
+  { type: "pistol", name: "USP-S | Kill Confirmed" },
+  { type: "pistol", name: "USP-S | Neo-Noir" },
+  { type: "pistol", name: "Glock-18 | Fade" },
+  { type: "pistol", name: "Glock-18 | Water Elemental" },
+  { type: "pistol", name: "P250 | Asiimov" },
+  { type: "pistol", name: "Five-SeveN | Case Hardened" },
+  { type: "smg",    name: "MP9 | Hydra" },
+  { type: "smg",    name: "MAC-10 | Neon Rider" },
+  { type: "smg",    name: "P90 | Asiimov" },
+  { type: "smg",    name: "UMP-45 | Primal Saber" },
+  { type: "shotgun", name: "Nova | Hyper Beast" },
+  { type: "shotgun", name: "XM1014 | Tranquility" },
+  { type: "shotgun", name: "Sawed-Off | The Kraken" },
+  { type: "knife",  name: "Karambit | Doppler" },
+  { type: "knife",  name: "Karambit | Fade" },
+  { type: "knife",  name: "Karambit | Tiger Tooth" },
+  { type: "knife",  name: "Butterfly Knife | Marble Fade" },
+  { type: "knife",  name: "M9 Bayonet | Autotronic" },
+  { type: "knife",  name: "Bayonet | Case Hardened" },
+  { type: "knife",  name: "Talon Knife | Doppler" },
+  { type: "gloves", name: "Sport Gloves | Pandora's Box" },
+  { type: "gloves", name: "Specialist Gloves | Crimson Kimono" },
+  { type: "gloves", name: "Driver Gloves | King Snake" },
+  { type: "gloves", name: "Hand Wraps | Cobalt Skulls" },
 ];
 const WEARS = [
   { label: "Прямо с завода", mult: 1.18 },
-  { label: "Немного поношено", mult: 1.05 },
-  { label: "После полевых", mult: 0.92 },
+  { label: "Немного поношенное", mult: 1.05 },
+  { label: "После полевых испытаний", mult: 0.92 },
   { label: "Поношенное", mult: 0.8 },
   { label: "Видавшее виды", mult: 0.68 },
 ];
 
 let _uid = 0;
 function makeItem(seedValue, id) {
-  const w = WEAPONS[(Math.random() * WEAPONS.length) | 0];
-  const f = FINISHES[(Math.random() * FINISHES.length) | 0];
+  const s = SKIN_CATALOG[(Math.random() * SKIN_CATALOG.length) | 0];
   const wear = WEARS[(Math.random() * WEARS.length) | 0];
   const st = Math.random() < 0.1;
   const value = Math.round(seedValue * (0.85 + Math.random() * 0.3) * wear.mult * (st ? 1.15 : 1));
   return {
     id: id ?? `it-${++_uid}-${Date.now()}`,
-    name: `${st ? "Счётчик | " : ""}${w.name} | ${f}`,
-    short: `${w.name.split(" «")[0]} | ${f}`,
-    type: w.type,
+    name: `${st ? "StatTrak™ " : ""}${s.name} (${wear.label})`,
+    short: s.name,
+    type: s.type,
     wear: wear.label,
     value,
     rarity: rarityForValue(value),
@@ -103,28 +144,40 @@ const sfx = {
   tick: () => beep(680 + Math.random() * 60, 0.035, "square", 0.06),
   win: () => { beep(660, 0.1, "triangle", 0.14); setTimeout(() => beep(880, 0.16, "triangle", 0.14), 90); },
   lose: () => beep(160, 0.22, "sine", 0.12),
-  // One continuous, pitch-descending tone for the whole spin instead of
-  // discrete ticks — sounds like a wheel winding down rather than a
-  // machine-gun of clicks. Returns a stop() you can call early if needed.
+  // A calm, evenly-spaced clock-like tick for the whole spin, rather than
+  // one continuous siren-like tone or a harsh randomized click. Returns a
+  // stop() in case the caller wants to cut it short.
   spin: (durationMs) => {
     if (!soundEnabled) return () => {};
-    try {
-      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      const now = audioCtx.currentTime;
-      const dur = durationMs / 1000;
-      const o = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      o.type = "sine";
-      o.frequency.setValueAtTime(560, now);
-      o.frequency.exponentialRampToValueAtTime(80, now + dur);
-      g.gain.setValueAtTime(0.0001, now);
-      g.gain.exponentialRampToValueAtTime(0.075, now + Math.min(0.25, dur * 0.08));
-      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
-      o.connect(g); g.connect(audioCtx.destination);
-      o.start(now);
-      o.stop(now + dur + 0.05);
-      return () => { try { o.stop(); } catch {} };
-    } catch { return () => {}; }
+    const tickOnce = (vol) => {
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = "sine";
+        o.frequency.setValueAtTime(480, now);
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(vol, now + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now);
+        o.stop(now + 0.06);
+      } catch {}
+    };
+    const timers = [];
+    const baseInterval = 190; // ms between ticks, like a calm clock hand
+    let elapsed = 0;
+    while (elapsed < durationMs) {
+      const progress = elapsed / durationMs;
+      // gently widen the gap near the very end, like it's settling — no
+      // dramatic acceleration, just a soft slow-down
+      const interval = baseInterval * (1 + Math.max(0, progress - 0.75) * 3);
+      const vol = 0.05 * (1 - progress * 0.4);
+      timers.push(setTimeout(() => tickOnce(vol), elapsed));
+      elapsed += interval;
+    }
+    return () => { timers.forEach(clearTimeout); };
   },
 };
 
@@ -231,8 +284,6 @@ function CrateArt({ accent, motif = "hex", size = 128 }) {
   );
 }
 
-/* Rotating 3D crate — real Three.js geometry, mounted only on the case detail
-   screen (one at a time) to keep it light. Falls back silently if three fails to load. */
 function Case3D({ accent, size = 210 }) {
   const mountRef = useRef(null);
   useEffect(() => {
@@ -412,12 +463,8 @@ function weightedPick(pool) {
 const fmt = (n) => (n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(2) + "K" : Math.round(n).toString());
 
 /* ---------------------------------- levels ---------------------------------- */
-// Cumulative XP required to REACH level N+2 (index 0 -> level 2, etc).
-// Curve grows a bit faster than linear so later levels take meaningfully longer.
 const LEVEL_THRESHOLDS = Array.from({ length: 60 }, (_, i) => Math.round(120 * Math.pow(i + 1, 1.32)));
 
-// How much XP a case is worth — roughly proportional to its price, so
-// expensive cases matter more but cheap ones aren't worthless.
 function xpForCase(cost) { return Math.max(3, Math.round(cost / 6)); }
 
 function levelForXp(xp) {
@@ -432,7 +479,6 @@ function levelProgress(xp) {
   const pct = Math.max(0, Math.min(100, Math.round(((xp - prev) / (next - prev)) * 100)));
   return { lvl, prev, next, pct, isMax: lvl > LEVEL_THRESHOLDS.length };
 }
-// Coin prize awarded the moment a player crosses into a new level.
 function levelPrize(lvl) { return lvl * 120; }
 
 /* ---------------------------------- backend ---------------------------------- */
@@ -617,9 +663,8 @@ function CaseTile({ c, coins, onOpen }) {
   );
 }
 
-
 export {
-  C, RARITY, rarityForValue, WEAPONS, FINISHES, WEARS, makeItem,
+  C, RARITY, rarityForValue, SKIN_CATALOG, WEARS, makeItem,
   sfx, WeaponGlyph, CrateArt, Case3D, ItemBadge, SparkField, ConfettiBurst,
   CATALOG, CASES, weightedPick, fmt,
   xpForCase, levelForXp, levelProgress, levelPrize,
