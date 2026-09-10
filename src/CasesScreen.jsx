@@ -144,11 +144,8 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
   return (
     <div className="flex flex-col h-full px-4 pt-5 pb-2 relative overflow-y-auto">
       <TopBar sub="Кейс" title={active.name} onBack={() => phase === "idle" && setActive(null)} />
-      <div style={{ background: "#FF0000", color: "#fff", padding: "6px", textAlign: "center", fontWeight: "bold", fontSize: 13, marginBottom: 8, borderRadius: 8 }}>
-        TEST BUILD v3 — если видишь это, новый код загрузился
-      </div>
 
-      <div className="flex flex-col items-center justify-center mb-1 relative" style={{ minHeight: 220 }}>
+      <div className="flex flex-col items-center justify-center mb-1 relative" style={{ minHeight: 220, zIndex: 0, isolation: "isolate", overflow: "hidden" }}>
         <div className="absolute inset-0" style={{ background: `radial-gradient(55% 75% at 50% 45%, ${active.accent}22, transparent 72%)` }} />
         <div className="absolute" style={{
           width: 220, height: 220, borderRadius: "50%",
@@ -174,7 +171,7 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
 
       {qty === 1 ? (
         <div className="relative rounded-2xl overflow-hidden mb-4 mt-3"
-          style={{ height: 104, background: C.bgInset, border: `1px solid ${C.border}` }}>
+          style={{ height: 104, background: C.bgInset, border: `1px solid ${C.border}`, position: "relative", zIndex: 5 }}>
           <div className="absolute left-1/2 top-0 bottom-0 z-20"
             style={{ width: 2, background: C.ember, transform: "translateX(-50%)", boxShadow: `0 0 12px ${C.ember}` }} />
           <div className="absolute left-1/2 top-0 z-20"
