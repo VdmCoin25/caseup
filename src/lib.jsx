@@ -34,59 +34,78 @@ const rarityForValue = (v) => RARITY.reduce((acc, t) => (v >= t.min ? t : acc), 
 // Real, publicly known CS2 weapon + skin name pairs, picked as short
 // (weapon, finish) strings rather than pulled from Valve's API — no Steam
 // calls, no OpenID, nothing that touches their service at all.
+// Static, hand-picked reference prices (approximate USD, illustrative — not
+// a live feed) so a cheap-tier drop always gets an appropriately "cheap"
+// looking real skin name and an expensive tier always gets something that
+// actually looks expensive, instead of names being assigned at random.
 const SKIN_CATALOG = [
-  { type: "rifle",  name: "AK-47 | Redline" },
-  { type: "rifle",  name: "AK-47 | Vulcan" },
-  { type: "rifle",  name: "AK-47 | Case Hardened" },
-  { type: "rifle",  name: "AK-47 | Fire Serpent" },
-  { type: "rifle",  name: "AK-47 | Asiimov" },
-  { type: "rifle",  name: "AK-47 | Neon Rider" },
-  { type: "rifle",  name: "AK-47 | Bloodsport" },
-  { type: "rifle",  name: "AK-47 | Wild Lotus" },
-  { type: "rifle",  name: "M4A4 | Asiimov" },
-  { type: "rifle",  name: "M4A4 | Howl" },
-  { type: "rifle",  name: "M4A4 | Neo-Noir" },
-  { type: "rifle",  name: "M4A4 | The Emperor" },
-  { type: "rifle",  name: "M4A1-S | Hyper Beast" },
-  { type: "rifle",  name: "M4A1-S | Icarus Fell" },
-  { type: "rifle",  name: "M4A1-S | Golden Coil" },
-  { type: "rifle",  name: "FAMAS | Afterimage" },
-  { type: "rifle",  name: "Galil AR | Chatterbox" },
-  { type: "sniper", name: "AWP | Dragon Lore" },
-  { type: "sniper", name: "AWP | Asiimov" },
-  { type: "sniper", name: "AWP | Neo-Noir" },
-  { type: "sniper", name: "AWP | Gungnir" },
-  { type: "sniper", name: "AWP | Hyper Beast" },
-  { type: "sniper", name: "AWP | Wildfire" },
-  { type: "sniper", name: "SSG 08 | Dragonfire" },
-  { type: "pistol", name: "Desert Eagle | Blaze" },
-  { type: "pistol", name: "Desert Eagle | Printstream" },
-  { type: "pistol", name: "Desert Eagle | Code Red" },
-  { type: "pistol", name: "USP-S | Kill Confirmed" },
-  { type: "pistol", name: "USP-S | Neo-Noir" },
-  { type: "pistol", name: "Glock-18 | Fade" },
-  { type: "pistol", name: "Glock-18 | Water Elemental" },
-  { type: "pistol", name: "P250 | Asiimov" },
-  { type: "pistol", name: "Five-SeveN | Case Hardened" },
-  { type: "smg",    name: "MP9 | Hydra" },
-  { type: "smg",    name: "MAC-10 | Neon Rider" },
-  { type: "smg",    name: "P90 | Asiimov" },
-  { type: "smg",    name: "UMP-45 | Primal Saber" },
-  { type: "shotgun", name: "Nova | Hyper Beast" },
-  { type: "shotgun", name: "XM1014 | Tranquility" },
-  { type: "shotgun", name: "Sawed-Off | The Kraken" },
-  { type: "knife",  name: "Karambit | Doppler" },
-  { type: "knife",  name: "Karambit | Fade" },
-  { type: "knife",  name: "Karambit | Tiger Tooth" },
-  { type: "knife",  name: "Butterfly Knife | Marble Fade" },
-  { type: "knife",  name: "M9 Bayonet | Autotronic" },
-  { type: "knife",  name: "Bayonet | Case Hardened" },
-  { type: "knife",  name: "Talon Knife | Doppler" },
-  { type: "gloves", name: "Sport Gloves | Pandora's Box" },
-  { type: "gloves", name: "Specialist Gloves | Crimson Kimono" },
-  { type: "gloves", name: "Driver Gloves | King Snake" },
-  { type: "gloves", name: "Hand Wraps | Cobalt Skulls" },
-];
+  { type: "rifle",  name: "AK-47 | Redline", usd: 15 },
+  { type: "rifle",  name: "AK-47 | Vulcan", usd: 40 },
+  { type: "rifle",  name: "AK-47 | Case Hardened", usd: 55 },
+  { type: "rifle",  name: "AK-47 | Fire Serpent", usd: 400 },
+  { type: "rifle",  name: "AK-47 | Asiimov", usd: 60 },
+  { type: "rifle",  name: "AK-47 | Neon Rider", usd: 45 },
+  { type: "rifle",  name: "AK-47 | Bloodsport", usd: 30 },
+  { type: "rifle",  name: "AK-47 | Wild Lotus", usd: 1500 },
+  { type: "rifle",  name: "M4A4 | Asiimov", usd: 70 },
+  { type: "rifle",  name: "M4A4 | Howl", usd: 2500 },
+  { type: "rifle",  name: "M4A4 | Neo-Noir", usd: 35 },
+  { type: "rifle",  name: "M4A4 | The Emperor", usd: 25 },
+  { type: "rifle",  name: "M4A1-S | Hyper Beast", usd: 20 },
+  { type: "rifle",  name: "M4A1-S | Icarus Fell", usd: 25 },
+  { type: "rifle",  name: "M4A1-S | Golden Coil", usd: 15 },
+  { type: "rifle",  name: "FAMAS | Afterimage", usd: 10 },
+  { type: "rifle",  name: "Galil AR | Chatterbox", usd: 8 },
+  { type: "sniper", name: "AWP | Dragon Lore", usd: 8000 },
+  { type: "sniper", name: "AWP | Asiimov", usd: 70 },
+  { type: "sniper", name: "AWP | Neo-Noir", usd: 60 },
+  { type: "sniper", name: "AWP | Gungnir", usd: 3000 },
+  { type: "sniper", name: "AWP | Hyper Beast", usd: 40 },
+  { type: "sniper", name: "AWP | Wildfire", usd: 45 },
+  { type: "sniper", name: "SSG 08 | Dragonfire", usd: 10 },
+  { type: "pistol", name: "Desert Eagle | Blaze", usd: 300 },
+  { type: "pistol", name: "Desert Eagle | Printstream", usd: 80 },
+  { type: "pistol", name: "Desert Eagle | Code Red", usd: 150 },
+  { type: "pistol", name: "USP-S | Kill Confirmed", usd: 40 },
+  { type: "pistol", name: "USP-S | Neo-Noir", usd: 30 },
+  { type: "pistol", name: "Glock-18 | Fade", usd: 250 },
+  { type: "pistol", name: "Glock-18 | Water Elemental", usd: 15 },
+  { type: "pistol", name: "P250 | Asiimov", usd: 8 },
+  { type: "pistol", name: "Five-SeveN | Case Hardened", usd: 10 },
+  { type: "smg",    name: "MP9 | Hydra", usd: 10 },
+  { type: "smg",    name: "MAC-10 | Neon Rider", usd: 15 },
+  { type: "smg",    name: "P90 | Asiimov", usd: 8 },
+  { type: "smg",    name: "UMP-45 | Primal Saber", usd: 10 },
+  { type: "shotgun", name: "Nova | Hyper Beast", usd: 5 },
+  { type: "shotgun", name: "XM1014 | Tranquility", usd: 5 },
+  { type: "shotgun", name: "Sawed-Off | The Kraken", usd: 5 },
+  { type: "knife",  name: "Karambit | Doppler", usd: 900 },
+  { type: "knife",  name: "Karambit | Fade", usd: 1200 },
+  { type: "knife",  name: "Karambit | Tiger Tooth", usd: 700 },
+  { type: "knife",  name: "Butterfly Knife | Marble Fade", usd: 1000 },
+  { type: "knife",  name: "M9 Bayonet | Autotronic", usd: 600 },
+  { type: "knife",  name: "Bayonet | Case Hardened", usd: 500 },
+  { type: "knife",  name: "Talon Knife | Doppler", usd: 800 },
+  { type: "gloves", name: "Sport Gloves | Pandora's Box", usd: 600 },
+  { type: "gloves", name: "Specialist Gloves | Crimson Kimono", usd: 700 },
+  { type: "gloves", name: "Driver Gloves | King Snake", usd: 300 },
+  { type: "gloves", name: "Hand Wraps | Cobalt Skulls", usd: 400 },
+].sort((a, b) => a.usd - b.usd);
+// 1 in-game coin roughly tracks $0.05 of reference price — purely for
+// picking a name that "feels" right for the coin amount rolled, not an
+// actual currency conversion.
+const PRICE_SCALE = 20;
+function skinsNear(targetCoinValue) {
+  let best = SKIN_CATALOG[0], bestDiff = Infinity;
+  const near = [];
+  for (const s of SKIN_CATALOG) {
+    const diff = Math.abs(Math.log(s.usd * PRICE_SCALE) - Math.log(Math.max(1, targetCoinValue)));
+    if (diff < bestDiff) { bestDiff = diff; best = s; }
+    near.push({ s, diff });
+  }
+  near.sort((a, b) => a.diff - b.diff);
+  return near.slice(0, 4).map((n) => n.s);
+}
 const WEARS = [
   { label: "Прямо с завода", mult: 1.18 },
   { label: "Немного поношенное", mult: 1.05 },
@@ -97,10 +116,15 @@ const WEARS = [
 
 let _uid = 0;
 function makeItem(seedValue, id) {
-  const s = SKIN_CATALOG[(Math.random() * SKIN_CATALOG.length) | 0];
   const wear = WEARS[(Math.random() * WEARS.length) | 0];
   const st = Math.random() < 0.1;
   const value = Math.round(seedValue * (0.85 + Math.random() * 0.3) * wear.mult * (st ? 1.15 : 1));
+  // Pick the name from real skins whose reference price is close to the
+  // value actually rolled, so a cheap drop never wears an absurdly
+  // expensive-sounding name (or vice versa) — game balance (odds, the 8x
+  // cap per case) stays exactly as tuned; only the *label* is price-matched.
+  const candidates = skinsNear(value);
+  const s = candidates[(Math.random() * candidates.length) | 0];
   return {
     id: id ?? `it-${++_uid}-${Date.now()}`,
     name: `${st ? "StatTrak™ " : ""}${s.name} (${wear.label})`,
@@ -284,6 +308,8 @@ function CrateArt({ accent, motif = "hex", size = 128 }) {
   );
 }
 
+/* Rotating 3D crate — real Three.js geometry, mounted only on the case detail
+   screen (one at a time) to keep it light. Falls back silently if three fails to load. */
 function Case3D({ accent, size = 210 }) {
   const mountRef = useRef(null);
   useEffect(() => {
