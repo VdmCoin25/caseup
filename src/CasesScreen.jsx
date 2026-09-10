@@ -16,6 +16,7 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
   const [burst, setBurst] = useState(0);
   const trackRef = useRef(null);
   const timers = useRef([]);
+  const rafRef = useRef(null);
   // Guards against double-invocation from an accidental double-tap: React
   // state (`phase`) doesn't update synchronously, so two clicks landing in
   // the same tick before re-render can both slip past a `phase !== "idle"`
@@ -24,7 +25,7 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
   // the reel animation getting stomped by a second, overlapping run.
   const busyRef = useRef(false);
 
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  useEffect(() => () => { timers.current.forEach(clearTimeout); if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 
   const totalCost = active ? active.cost * qty : 0;
   const rollOne = () => makeItem(weightedPick(active.pool).seed);
@@ -36,34 +37,36 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
     const items = Array.from({ length: REEL_LEN }, (_, i) => (i === WIN_INDEX ? winItem : rollOne()));
     setReel(items); setWon(winItem); setPhase("spinning");
 
-    const dur = fast ? 1.4 : 6.4;
+    const durMs = (fast ? 1.4 : 6.4) * 1000;
     const el = trackRef.current;
-    // Web Animations API instead of manually flipping inline transition +
-    // forcing a reflow: some Telegram in-app WebViews don't reliably pick up
-    // that reflow trick, which is what was making the ribbon skip straight
-    // to the end. el.animate() is broadly supported and doesn't need it —
-    // and finishing the phase change in its own callback keeps the visual
-    // animation and the "it's done" moment perfectly in sync.
-    if (el) {
-      const jitter = (Math.random() - 0.5) * (ITEM_W - 58);
-      const target = -(WIN_INDEX * ITEM_W + ITEM_W / 2) + jitter;
-      const anim = el.animate(
-        [{ transform: "translateX(calc(50% + 0px))" }, { transform: `translateX(calc(50% + ${target}px))` }],
-        { duration: dur * 1000, easing: "cubic-bezier(.09,.82,.05,1)", fill: "forwards" }
-      );
-      anim.onfinish = () => {
-        el.style.transform = `translateX(calc(50% + ${target}px))`;
-      };
-    }
-    timers.current.push(setTimeout(() => {
-      busyRef.current = false;
-      setPhase("result");
-      if (winItem.rarity.min >= 900) { sfx.win(); setBurst((b) => b + 1); } else sfx.tap();
-      // The item is banked immediately, so it can never be lost by closing the
-      // modal or switching tabs. Selling later removes it again.
-      addItem(winItem);
-      onDrop && onDrop(winItem, active);
-    }, dur * 1000));
+    const jitter = (Math.random() - 0.5) * (ITEM_W - 58);
+    const target = -(WIN_INDEX * ITEM_W + ITEM_W / 2) + jitter;
+    // Neither CSS transitions nor the Web Animations API reliably animated
+    // inside Telegram's in-app browser on some devices — both silently
+    // skipped straight to the end state. This drives the ribbon by hand,
+    // one requestAnimationFrame at a time, setting the transform directly
+    // every frame. There's no simpler or more broadly-supported way to move
+    // something on screen, so if this doesn't animate, nothing will.
+    const startTime = performance.now();
+    const easeOutQuart = (t) => 1 - Math.pow(1 - t, 4);
+    const step = (now) => {
+      const t = Math.min(1, (now - startTime) / durMs);
+      if (el) el.style.transform = `translateX(calc(50% + ${target * easeOutQuart(t)}px))`;
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(step);
+      } else {
+        rafRef.current = null;
+        busyRef.current = false;
+        setPhase("result");
+        if (winItem.rarity.min >= 900) { sfx.win(); setBurst((b) => b + 1); } else sfx.tap();
+        // The item is banked immediately, so it can never be lost by closing the
+        // modal or switching tabs. Selling later removes it again.
+        addItem(winItem);
+        onDrop && onDrop(winItem, active);
+      }
+    };
+    if (el) el.style.transform = "translateX(calc(50% + 0px))";
+    rafRef.current = requestAnimationFrame(step);
   };
 
   const openMulti = () => {
