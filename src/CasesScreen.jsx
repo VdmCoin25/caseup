@@ -1,23 +1,25 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { Coins, Search, Zap, Sparkles } from "lucide-react";
-import { C, sfx, ItemBadge, Case3D, ConfettiBurst, CASES, weightedPick, makeItem, fmt, TopBar, CaseTile } from "./lib.jsx";
+import { Coins, Search, Zap } from "lucide-react";
+import { C, sfx, ItemBadge, Case3D, ConfettiBurst, CASES, weightedPick, makeItem, fmt, TopBar, ITEM_W, REEL_LEN, WIN_INDEX, CaseTile } from "./lib.jsx";
 
 function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
   const [active, setActive] = useState(null);
   const [q, setQ] = useState("");
   const [qty, setQty] = useState(1);
   const [phase, setPhase] = useState("idle");
+  const [reel, setReel] = useState([]);
+  const [reelOffset, setReelOffset] = useState(0);
   const [won, setWon] = useState(null);
-  const [cycleItem, setCycleItem] = useState(null);
   const [multiWon, setMultiWon] = useState([]);
   const [revealed, setRevealed] = useState(0);
   const [soldIds, setSoldIds] = useState(() => new Set());
   const [fast, setFast] = useState(false);
   const [burst, setBurst] = useState(0);
   const timers = useRef([]);
+  const rafRef = useRef(null);
   const busyRef = useRef(false);
 
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  useEffect(() => () => { timers.current.forEach(clearTimeout); if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 
   const totalCost = active ? active.cost * qty : 0;
   const rollOne = () => makeItem(weightedPick(active.pool).seed);
@@ -26,27 +28,32 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
     setCoins((c) => c - active.cost);
     sfx.open();
     const winItem = rollOne();
+    const items = Array.from({ length: REEL_LEN }, (_, i) => (i === WIN_INDEX ? winItem : rollOne()));
+    setReel(items);
+    setReelOffset(0);
     setWon(winItem);
     setPhase("spinning");
-    const totalMs = fast ? 1100 : 5200;
+
+    const durMs = (fast ? 1.6 : 6.4) * 1000;
+    const jitter = (Math.random() - 0.5) * (ITEM_W - 58);
+    const target = -(WIN_INDEX * ITEM_W + ITEM_W / 2) + jitter;
     const startTime = performance.now();
-    const tick = () => {
-      const progress = Math.min(1, (performance.now() - startTime) / totalMs);
-      if (progress >= 1) {
-        setCycleItem(winItem);
+    const easeOutQuart = (t) => 1 - Math.pow(1 - t, 4);
+    const step = (now) => {
+      const t = Math.min(1, (now - startTime) / durMs);
+      setReelOffset(target * easeOutQuart(t));
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(step);
+      } else {
+        rafRef.current = null;
         busyRef.current = false;
         setPhase("result");
         if (winItem.rarity.min >= 900) { sfx.win(); setBurst((b) => b + 1); } else sfx.tap();
         addItem(winItem);
         onDrop && onDrop(winItem, active);
-        return;
       }
-      setCycleItem(rollOne());
-      sfx.tick();
-      const delay = 45 + progress * progress * 260;
-      timers.current.push(setTimeout(tick, delay));
     };
-    tick();
+    rafRef.current = requestAnimationFrame(step);
   };
 
   const openMulti = () => {
@@ -135,9 +142,6 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
     );
   }
 
-  const spinning = phase === "spinning";
-  const displayItem = spinning ? cycleItem : null;
-
   return (
     <div className="flex flex-col h-full px-4 pt-5 pb-2 relative overflow-y-auto">
       <TopBar sub="Кейс" title={active.name} onBack={() => phase === "idle" && setActive(null)} />
@@ -153,14 +157,12 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
           width: 236, height: 236, border: `1px solid ${active.accent}33`,
           boxShadow: `inset 0 0 30px ${active.accent}22`,
         }} />
-        <div style={{ animation: (phase === "burst" || spinning) ? "crateBurst 1s ease-in-out infinite" : "none" }}>
+        <div style={{ animation: phase === "burst" ? "crateBurst 1s ease-in-out infinite" : "none" }}>
           <Case3D accent={active.accent} size={190} />
         </div>
         <style>{`
           @keyframes crateBurst{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
           @keyframes wheelGlow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-          @keyframes slotPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
-          @keyframes slotFlicker{from{opacity:.55}to{opacity:1}}
         `}</style>
         <div className="relative -mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-[13px]"
           style={{ background: C.bgElevated, border: `1px solid ${active.accent}66`, color: C.gold, boxShadow: `0 4px 16px ${active.accent}33` }}>
@@ -169,31 +171,24 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
       </div>
 
       {qty === 1 ? (
-        <div className="relative rounded-2xl mb-4 mt-3 flex items-center justify-center"
-          style={{ height: 132, background: C.bgInset, border: `1px solid ${spinning ? active.accent + "aa" : C.border}`, transition: "border-color .3s" }}>
-          {!spinning && !displayItem && (
-            <div className="text-[12px] px-6 text-center" style={{ color: C.textDim }}>Нажми «Открыть», чтобы запустить</div>
-          )}
-          {spinning && displayItem && (
-            <div key={displayItem.id} className="flex flex-col items-center gap-1.5" style={{ animation: "slotFlicker .05s ease-out" }}>
-              <div style={{ animation: "slotPulse .4s ease-in-out infinite" }}>
-                <ItemBadge item={displayItem} size={72} />
+        <div className="relative rounded-2xl overflow-hidden mb-4 mt-3"
+          style={{ height: 104, background: C.bgInset, border: `1px solid ${C.border}` }}>
+          <div className="absolute left-1/2 top-0 bottom-0 z-20"
+            style={{ width: 2, background: C.ember, transform: "translateX(-50%)", boxShadow: `0 0 12px ${C.ember}` }} />
+          <div className="absolute left-1/2 top-0 z-20"
+            style={{ transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "6px solid transparent", borderRight: "6px solid transparent", borderTop: `9px solid ${C.ember}` }} />
+          <div className="absolute inset-y-0 left-0 z-10 w-10" style={{ background: `linear-gradient(90deg, ${C.bgInset}, transparent)` }} />
+          <div className="absolute inset-y-0 right-0 z-10 w-10" style={{ background: `linear-gradient(270deg, ${C.bgInset}, transparent)` }} />
+          <div className="flex h-full items-center" style={{ transform: `translateX(calc(50% + ${reelOffset}px))` }}>
+            {reel.map((it, i) => (
+              <div key={i} className="flex-shrink-0 flex flex-col items-center justify-center rounded-xl mx-1"
+                style={{ width: ITEM_W - 8, height: 86, background: C.bgCard, border: `1.5px solid ${it.rarity.color}77`, boxShadow: `inset 0 -3px 0 ${it.rarity.color}` }}>
+                <ItemBadge item={it} size={40} />
+                <div className="text-[9px] font-bold mt-1.5" style={{ color: it.rarity.color }}>{fmt(it.value)}</div>
               </div>
-              <div className="text-[10px] font-bold" style={{ color: displayItem.rarity.color }}>{fmt(displayItem.value)}</div>
-            </div>
-          )}
-          {spinning && (
-            <>
-              <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 text-[9px] font-semibold tracking-wide uppercase"
-                style={{ color: active.accent }}>
-                <Sparkles size={10} /> Открываем
-              </div>
-              <div className="absolute inset-x-6 bottom-2.5 h-1 rounded-full overflow-hidden" style={{ background: `${C.border}` }}>
-                <div style={{ height: "100%", width: "40%", background: active.accent, borderRadius: 999, animation: "spinBar 1s linear infinite" }} />
-              </div>
-              <style>{`@keyframes spinBar{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}`}</style>
-            </>
-          )}
+            ))}
+            {!reel.length && <div className="text-[12px] px-6" style={{ color: C.textDim }}>Нажми «Открыть», чтобы запустить</div>}
+          </div>
         </div>
       ) : (
         <div className="text-center text-[12px] mb-4 mt-3" style={{ color: C.textDim }}>
