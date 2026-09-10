@@ -91,9 +91,6 @@ const SKIN_CATALOG = [
   { type: "gloves", name: "Driver Gloves | King Snake", usd: 300 },
   { type: "gloves", name: "Hand Wraps | Cobalt Skulls", usd: 400 },
 ].sort((a, b) => a.usd - b.usd);
-// 1 in-game coin roughly tracks $0.05 of reference price — purely for
-// picking a name that "feels" right for the coin amount rolled, not an
-// actual currency conversion.
 const PRICE_SCALE = 20;
 function skinsNear(targetCoinValue) {
   let best = SKIN_CATALOG[0], bestDiff = Infinity;
@@ -119,10 +116,6 @@ function makeItem(seedValue, id) {
   const wear = WEARS[(Math.random() * WEARS.length) | 0];
   const st = Math.random() < 0.1;
   const value = Math.round(seedValue * (0.85 + Math.random() * 0.3) * wear.mult * (st ? 1.15 : 1));
-  // Pick the name from real skins whose reference price is close to the
-  // value actually rolled, so a cheap drop never wears an absurdly
-  // expensive-sounding name (or vice versa) — game balance (odds, the 8x
-  // cap per case) stays exactly as tuned; only the *label* is price-matched.
   const candidates = skinsNear(value);
   const s = candidates[(Math.random() * candidates.length) | 0];
   return {
@@ -168,9 +161,6 @@ const sfx = {
   tick: () => beep(680 + Math.random() * 60, 0.035, "square", 0.06),
   win: () => { beep(660, 0.1, "triangle", 0.14); setTimeout(() => beep(880, 0.16, "triangle", 0.14), 90); },
   lose: () => beep(160, 0.22, "sine", 0.12),
-  // A calm, evenly-spaced clock-like tick for the whole spin, rather than
-  // one continuous siren-like tone or a harsh randomized click. Returns a
-  // stop() in case the caller wants to cut it short.
   spin: (durationMs) => {
     if (!soundEnabled) return () => {};
     const tickOnce = (vol) => {
@@ -190,12 +180,10 @@ const sfx = {
       } catch {}
     };
     const timers = [];
-    const baseInterval = 190; // ms between ticks, like a calm clock hand
+    const baseInterval = 190;
     let elapsed = 0;
     while (elapsed < durationMs) {
       const progress = elapsed / durationMs;
-      // gently widen the gap near the very end, like it's settling — no
-      // dramatic acceleration, just a soft slow-down
       const interval = baseInterval * (1 + Math.max(0, progress - 0.75) * 3);
       const vol = 0.05 * (1 - progress * 0.4);
       timers.push(setTimeout(() => tickOnce(vol), elapsed));
@@ -360,23 +348,18 @@ function CrateArt({ accent, motif = "hex", size = 128 }) {
         </radialGradient>
       </defs>
       <ellipse cx="64" cy="99" rx="44" ry="6.5" fill="#000" opacity=".5" />
-      {/* body */}
       <path d="M16 40l48-22 48 22v40L64 96 16 80z" fill={`url(#bod-${gid})`} stroke={`url(#edge-${gid})`} strokeWidth="2.4" strokeLinejoin="round" />
-      {/* lid */}
       <path d="M16 40l48-22 48 22-48 20z" fill={`url(#lid-${gid})`} stroke={accent} strokeWidth="2.2" strokeLinejoin="round" />
       <path d="M64 18l44 21.5-6 2.7L64 23.4l-38 18.8-6-2.7z" fill="#fff" opacity=".14" />
-      {/* seams + banding */}
       <path d="M64 60v36" stroke={accent} strokeWidth="2" opacity=".55" />
       <path d="M16 40v40M112 40v40" stroke={accent} strokeWidth="2" opacity=".55" />
       <path d="M34 49v39M94 49v39" stroke={accent} strokeWidth="1.4" opacity=".32" />
       <rect x="16" y="66" width="96" height="3.4" fill={dark} opacity=".4" />
       <rect x="16" y="66" width="96" height="1" fill={accent} opacity=".35" />
-      {/* corner brackets */}
       {[[18, 42], [110, 42], [18, 78], [110, 78]].map(([x, y]) => (
         <path key={`${x}-${y}`} d={`M${x - 5} ${y}h10M${x} ${y - 5}v10`} stroke={accent} strokeWidth="2" opacity=".55" strokeLinecap="round" />
       ))}
       {rivet(30, 45)} {rivet(98, 45)} {rivet(30, 75)} {rivet(98, 75)}
-      {/* center emblem plate */}
       <rect x="54" y="50" width="20" height="12" rx="2.5" fill={dark} stroke={accent} strokeWidth="2" />
       <rect x="56.5" y="52.5" width="15" height="7" rx="1.2" fill={`url(#emblem-${gid})`} opacity=".9" />
       <rect x="24" y="60" width="9" height="7" rx="1.5" fill={dark} stroke={accent} strokeWidth="1.6" opacity=".85" />
@@ -595,7 +578,6 @@ const SUPABASE_URL = "https://sjyrjeaghkkqkpkhlhhv.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_zGLwpCSxsbBS2TZaPHzO6A_ViS-m_I0";
 const SYNC_FN = `${SUPABASE_URL}/functions/v1/telegram-sync`;
 
-// Fill in your bot's @username after you create it in BotFather.
 const BOT_USERNAME = "Caseeup_bot";
 
 async function serverSync(action, initData, payload, startParam) {
@@ -626,10 +608,6 @@ async function fetchLeaderboard() {
   return res.json();
 }
 
-// Cosmetic on the client — only decides whether to render the admin tab at
-// all. The real gate lives server-side in telegram-sync (checks the verified
-// Telegram ID before doing anything), so this constant being visible in the
-// bundle isn't a security issue.
 const ADMIN_TELEGRAM_ID = 721141865;
 
 async function adminSync(action, initData, extra) {
@@ -657,7 +635,7 @@ function LogoMark({ size = 26 }) {
 }
 
 function AppHeader({ coins, tgUser, onNav, notifications }) {
-  const [openPanel, setOpenPanel] = useState(null); // 'bell' | 'menu' | null
+  const [openPanel, setOpenPanel] = useState(null);
   return (
     <div className="relative z-30 flex items-center justify-between px-4 py-3"
       style={{ background: C.bgElevated, borderBottom: `1px solid ${C.border}` }}>
@@ -745,7 +723,7 @@ function TopBar({ title, sub, onBack }) {
 }
 
 /* ---------------------------------- cases ---------------------------------- */
-const ITEM_W = 88, REEL_LEN = 56, WIN_INDEX = 47;
+const ITEM_W = 88, REEL_LEN = 20, WIN_INDEX = 15;
 
 function CaseTile({ c, coins, onOpen }) {
   const afford = coins >= c.cost;
