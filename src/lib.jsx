@@ -207,109 +207,185 @@ const sfx = {
 
 /* ---------------------------------- artwork ---------------------------------- */
 function WeaponGlyph({ type, color, size = 24 }) {
-  const dk = "rgba(0,0,0,.35)";
+  const dk = "rgba(0,0,0,.4)";
+  const gid = `wg-${type}-${color.replace("#", "")}`;
+  const defs = (
+    <defs>
+      <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#fff" stopOpacity=".55" />
+        <stop offset=".18" stopColor={color} stopOpacity="1" />
+        <stop offset="1" stopColor={color} stopOpacity=".68" />
+      </linearGradient>
+    </defs>
+  );
+  const fillMain = `url(#${gid})`;
   const P = {
     rifle: (
-      <g fill={color}>
-        <rect x="3" y="21" width="30" height="4.5" rx="1" />
-        <rect x="30" y="17.5" width="9" height="5" rx="1" />
-        <polygon points="39,17 45,19 45,24 39,24" opacity=".92" />
-        <polygon points="9,25.5 14,25.5 12,37 8,37" />
-        <rect x="17" y="25.5" width="6" height="7" rx="1" />
-        <rect x="19" y="13" width="3.4" height="8" rx="1" />
+      <g>
+        {defs}
+        <g fill={fillMain} stroke={dk} strokeWidth="0.6">
+          <rect x="3" y="21" width="30" height="4.5" rx="1" />
+          <rect x="30" y="17.5" width="9" height="5" rx="1" />
+          <polygon points="39,17 45,19 45,24 39,24" opacity=".92" />
+          <polygon points="9,25.5 14,25.5 12,37 8,37" />
+          <rect x="17" y="25.5" width="6" height="7" rx="1" />
+          <rect x="19" y="13" width="3.4" height="8" rx="1" />
+        </g>
         <rect x="24" y="17.5" width="5" height="3.5" fill={dk} />
+        <rect x="4" y="21.6" width="28" height="1" fill="#fff" opacity=".28" />
+        <rect x="17.5" y="26" width="1.1" height="6" fill="#fff" opacity=".22" />
       </g>
     ),
     sniper: (
-      <g fill={color}>
-        <rect x="2" y="23" width="36" height="3.6" rx="1" />
-        <rect x="9" y="14" width="19" height="4.6" rx="2" />
+      <g>
+        {defs}
+        <g fill={fillMain} stroke={dk} strokeWidth="0.6">
+          <rect x="2" y="23" width="36" height="3.6" rx="1" />
+          <rect x="9" y="14" width="19" height="4.6" rx="2" />
+          <polygon points="38,20.5 45,22.5 45,28 38,27" opacity=".92" />
+          <rect x="14" y="26.6" width="6" height="8" rx="1" />
+          <rect x="6" y="26.6" width="4" height="10" rx="1" />
+          <rect x="10" y="34" width="3" height="4" rx="0.8" />
+          <rect x="20" y="34" width="3" height="4" rx="0.8" />
+        </g>
         <circle cx="10.5" cy="16.3" r="3.6" fill={dk} />
         <circle cx="10.5" cy="16.3" r="2.1" fill={color} />
+        <circle cx="9.6" cy="15.4" r="0.7" fill="#fff" opacity=".8" />
         <circle cx="26.5" cy="16.3" r="3.2" fill={dk} />
-        <polygon points="38,20.5 45,22.5 45,28 38,27" opacity=".92" />
-        <rect x="14" y="26.6" width="6" height="8" rx="1" />
-        <rect x="6" y="26.6" width="4" height="10" rx="1" />
+        <rect x="3" y="23.4" width="34" height="0.9" fill="#fff" opacity=".25" />
       </g>
     ),
     pistol: (
-      <g fill={color}>
-        <rect x="6" y="16" width="24" height="7" rx="2" />
+      <g>
+        {defs}
+        <g fill={fillMain} stroke={dk} strokeWidth="0.6">
+          <rect x="6" y="16" width="24" height="7" rx="2" />
+          <path d="M15 23h9v6.5c0 5-3.2 9-9 10.5V23z" />
+        </g>
         <rect x="27" y="18.5" width="5" height="3.4" fill={dk} />
-        <path d="M15 23h9v6.5c0 5-3.2 9-9 10.5V23z" />
         <rect x="9" y="23" width="6" height="3" rx="1" fill={dk} />
+        <rect x="7" y="17" width="22" height="1" fill="#fff" opacity=".3" />
+        <rect x="9" y="17.5" width="1.5" height="4.5" fill="#fff" opacity=".18" />
+        <rect x="12" y="17.5" width="1.5" height="4.5" fill="#fff" opacity=".18" />
       </g>
     ),
     shotgun: (
-      <g fill={color}>
-        <rect x="2" y="19.5" width="34" height="3.4" rx="1" />
-        <rect x="2" y="24.5" width="34" height="3.4" rx="1" />
-        <polygon points="36,18.5 44,20.5 44,27.5 36,27" opacity=".92" />
+      <g>
+        {defs}
+        <g fill={fillMain} stroke={dk} strokeWidth="0.6">
+          <rect x="2" y="19.5" width="34" height="3.4" rx="1" />
+          <rect x="2" y="24.5" width="34" height="3.4" rx="1" />
+          <polygon points="36,18.5 44,20.5 44,27.5 36,27" opacity=".92" />
+          <polygon points="8,28 22,28 20,38 10,38" />
+        </g>
         <rect x="12" y="28" width="14" height="6" rx="2.5" fill={dk} />
-        <polygon points="8,28 22,28 20,38 10,38" />
+        <rect x="3" y="20" width="30" height="0.8" fill="#fff" opacity=".3" />
+        <rect x="3" y="25" width="30" height="0.8" fill="#fff" opacity=".22" />
       </g>
     ),
     knife: (
-      <g fill={color}>
-        <polygon points="8,32 32,7 37,11 13,39" />
+      <g>
+        {defs}
+        <g fill={fillMain} stroke={dk} strokeWidth="0.6">
+          <polygon points="8,32 32,7 37,11 13,39" />
+          <rect x="2" y="36" width="10" height="5" rx="2" transform="rotate(-42 7 38)" />
+        </g>
         <polygon points="8,32 13,39 5,40" fill={dk} />
-        <rect x="2" y="36" width="10" height="5" rx="2" transform="rotate(-42 7 38)" />
+        <polygon points="16,28 33,10.6 35,12.4 18,30" fill="#fff" opacity=".3" />
+        <line x1="10" y1="33" x2="30" y2="12" stroke="#fff" strokeOpacity=".18" strokeWidth="1" />
       </g>
     ),
     smg: (
-      <g fill={color}>
-        <rect x="4" y="22" width="24" height="5" rx="1.5" />
-        <rect x="10" y="16.5" width="7" height="5.5" rx="1" />
-        <polygon points="28,20.5 38,22 38,29 28,27" opacity=".92" />
-        <rect x="14" y="27" width="6" height="9" rx="1" />
+      <g>
+        {defs}
+        <g fill={fillMain} stroke={dk} strokeWidth="0.6">
+          <rect x="4" y="22" width="24" height="5" rx="1.5" />
+          <rect x="10" y="16.5" width="7" height="5.5" rx="1" />
+          <polygon points="28,20.5 38,22 38,29 28,27" opacity=".92" />
+          <rect x="14" y="27" width="6" height="9" rx="1" />
+        </g>
         <rect x="6" y="27" width="4" height="6" rx="1" fill={dk} />
+        <rect x="5" y="22.6" width="22" height="1" fill="#fff" opacity=".28" />
       </g>
     ),
     gloves: (
-      <g fill={color}>
-        <path d="M14 38V21a3 3 0 0 1 6 0v6-8a3 3 0 0 1 6 0v8-6a3 3 0 0 1 6 0v11c0 6-4.5 10.5-10 10.5h-1c-5.5 0-10.3-4.5-10.3-10.5v-5a2.8 2.8 0 0 1 5.6 0v3.5" />
+      <g>
+        {defs}
+        <g fill={fillMain} stroke={dk} strokeWidth="0.6">
+          <path d="M14 38V21a3 3 0 0 1 6 0v6-8a3 3 0 0 1 6 0v8-6a3 3 0 0 1 6 0v11c0 6-4.5 10.5-10 10.5h-1c-5.5 0-10.3-4.5-10.3-10.5v-5a2.8 2.8 0 0 1 5.6 0v3.5" />
+        </g>
+        <path d="M15.5 22.5v8.5M21 20v10M26.5 20v10" stroke="#fff" strokeOpacity=".22" strokeWidth="0.8" fill="none" />
+        <ellipse cx="21" cy="38" rx="8" ry="2.4" fill={dk} opacity=".5" />
       </g>
     ),
   };
-  return <svg width={size} height={size} viewBox="0 0 48 48" style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,.4))" }}>{P[type] || P.rifle}</svg>;
+  return <svg width={size} height={size} viewBox="0 0 48 48" style={{ filter: "drop-shadow(0 1.5px 2px rgba(0,0,0,.5))" }}>{P[type] || P.rifle}</svg>;
 }
 
 function CrateArt({ accent, motif = "hex", size = 128 }) {
-  const dark = "#1A120C";
+  const dark = "#120C08";
+  const gid = `${motif}-${accent}`;
   const Motif = {
-    hex: <path d="M64 40l14 8v16l-14 8-14-8V48z" fill="none" stroke={accent} strokeWidth="3" opacity=".85" />,
-    fang: <path d="M52 42h24l-6 22-6-10-6 10z" fill={accent} opacity=".8" />,
-    leaf: <path d="M64 38c10 6 17 14 17 23a17 17 0 0 1-34 0c0-9 7-17 17-23z" fill={accent} opacity=".75" />,
-    burst: <g stroke={accent} strokeWidth="3" opacity=".85" fill="none"><circle cx="64" cy="55" r="9" /><path d="M64 38v8M64 64v8M47 55h8M73 55h8" /></g>,
+    hex: <path d="M64 40l14 8v16l-14 8-14-8V48z" fill="none" stroke={accent} strokeWidth="3" opacity=".9" />,
+    fang: <path d="M52 42h24l-6 22-6-10-6 10z" fill={accent} opacity=".85" />,
+    leaf: <path d="M64 38c10 6 17 14 17 23a17 17 0 0 1-34 0c0-9 7-17 17-23z" fill={accent} opacity=".8" />,
+    burst: <g stroke={accent} strokeWidth="3" opacity=".9" fill="none"><circle cx="64" cy="55" r="9" /><path d="M64 38v8M64 64v8M47 55h8M73 55h8" /></g>,
   }[motif];
+  const rivet = (x, y) => (
+    <g key={`${x}-${y}`}>
+      <circle cx={x} cy={y} r="2.1" fill={dark} opacity=".7" />
+      <circle cx={x - 0.5} cy={y - 0.5} r="1.1" fill={accent} opacity=".8" />
+    </g>
+  );
   return (
     <svg width={size} height={size * 0.82} viewBox="0 0 128 105">
       <defs>
-        <linearGradient id={`lid-${motif}-${accent}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={accent} stopOpacity=".55" />
-          <stop offset="1" stopColor={accent} stopOpacity=".18" />
+        <linearGradient id={`lid-${gid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity=".4" />
+          <stop offset=".2" stopColor={accent} stopOpacity=".65" />
+          <stop offset="1" stopColor={accent} stopOpacity=".15" />
         </linearGradient>
-        <linearGradient id={`bod-${motif}-${accent}`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor={accent} stopOpacity=".3" />
-          <stop offset="1" stopColor={dark} stopOpacity=".95" />
+        <linearGradient id={`bod-${gid}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor={accent} stopOpacity=".38" />
+          <stop offset=".5" stopColor={dark} stopOpacity=".92" />
+          <stop offset="1" stopColor={dark} stopOpacity=".98" />
         </linearGradient>
+        <linearGradient id={`edge-${gid}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor={accent} stopOpacity="1" />
+          <stop offset="1" stopColor={accent} stopOpacity=".35" />
+        </linearGradient>
+        <radialGradient id={`emblem-${gid}`} cx=".5" cy=".35" r=".7">
+          <stop offset="0" stopColor="#fff" stopOpacity=".5" />
+          <stop offset="1" stopColor={accent} stopOpacity=".9" />
+        </radialGradient>
       </defs>
-      <ellipse cx="64" cy="98" rx="42" ry="6" fill="#000" opacity=".45" />
-      <path d="M16 40l48-22 48 22v40L64 96 16 80z" fill={`url(#bod-${motif}-${accent})`} stroke={accent} strokeWidth="2.4" strokeLinejoin="round" opacity=".95" />
-      <path d="M16 40l48-22 48 22-48 20z" fill={`url(#lid-${motif}-${accent})`} stroke={accent} strokeWidth="2.4" strokeLinejoin="round" />
+      <ellipse cx="64" cy="99" rx="44" ry="6.5" fill="#000" opacity=".5" />
+      {/* body */}
+      <path d="M16 40l48-22 48 22v40L64 96 16 80z" fill={`url(#bod-${gid})`} stroke={`url(#edge-${gid})`} strokeWidth="2.4" strokeLinejoin="round" />
+      {/* lid */}
+      <path d="M16 40l48-22 48 22-48 20z" fill={`url(#lid-${gid})`} stroke={accent} strokeWidth="2.2" strokeLinejoin="round" />
+      <path d="M64 18l44 21.5-6 2.7L64 23.4l-38 18.8-6-2.7z" fill="#fff" opacity=".14" />
+      {/* seams + banding */}
       <path d="M64 60v36" stroke={accent} strokeWidth="2" opacity=".55" />
-      <path d="M16 40v40M112 40v40" stroke={accent} strokeWidth="2" opacity=".5" />
-      <path d="M34 49v39M94 49v39" stroke={accent} strokeWidth="1.6" opacity=".3" />
-      <rect x="56" y="52" width="16" height="9" rx="2" fill={dark} stroke={accent} strokeWidth="2" />
-      <rect x="24" y="60" width="9" height="7" rx="1.5" fill={dark} stroke={accent} strokeWidth="1.6" opacity=".8" />
-      <rect x="95" y="60" width="9" height="7" rx="1.5" fill={dark} stroke={accent} strokeWidth="1.6" opacity=".8" />
+      <path d="M16 40v40M112 40v40" stroke={accent} strokeWidth="2" opacity=".55" />
+      <path d="M34 49v39M94 49v39" stroke={accent} strokeWidth="1.4" opacity=".32" />
+      <rect x="16" y="66" width="96" height="3.4" fill={dark} opacity=".4" />
+      <rect x="16" y="66" width="96" height="1" fill={accent} opacity=".35" />
+      {/* corner brackets */}
+      {[[18, 42], [110, 42], [18, 78], [110, 78]].map(([x, y]) => (
+        <path key={`${x}-${y}`} d={`M${x - 5} ${y}h10M${x} ${y - 5}v10`} stroke={accent} strokeWidth="2" opacity=".55" strokeLinecap="round" />
+      ))}
+      {rivet(30, 45)} {rivet(98, 45)} {rivet(30, 75)} {rivet(98, 75)}
+      {/* center emblem plate */}
+      <rect x="54" y="50" width="20" height="12" rx="2.5" fill={dark} stroke={accent} strokeWidth="2" />
+      <rect x="56.5" y="52.5" width="15" height="7" rx="1.2" fill={`url(#emblem-${gid})`} opacity=".9" />
+      <rect x="24" y="60" width="9" height="7" rx="1.5" fill={dark} stroke={accent} strokeWidth="1.6" opacity=".85" />
+      <rect x="95" y="60" width="9" height="7" rx="1.5" fill={dark} stroke={accent} strokeWidth="1.6" opacity=".85" />
       {Motif}
     </svg>
   );
 }
 
-/* Rotating 3D crate — real Three.js geometry, mounted only on the case detail
-   screen (one at a time) to keep it light. Falls back silently if three fails to load. */
 function Case3D({ accent, size = 210 }) {
   const mountRef = useRef(null);
   useEffect(() => {
@@ -383,19 +459,26 @@ function Case3D({ accent, size = 210 }) {
 }
 
 function ItemBadge({ item, size = 44 }) {
+  const c = item.rarity.color;
   return (
     <div
       className="relative flex items-center justify-center flex-shrink-0 overflow-hidden"
       style={{
         width: size, height: size, borderRadius: size * 0.26,
-        background: `radial-gradient(120% 120% at 30% 18%, ${item.rarity.color}4D, ${C.bgInset} 72%)`,
-        border: `1.5px solid ${item.rarity.color}80`,
-        boxShadow: `0 0 ${size * 0.3}px ${item.rarity.color}44, inset 0 1px 0 rgba(255,255,255,.07)`,
+        background: `linear-gradient(155deg, ${C.bgCard} 0%, ${C.bgInset} 55%, ${C.bgDeep} 100%)`,
+        border: `1.5px solid ${c}80`,
+        boxShadow: `0 0 ${size * 0.32}px ${c}40, 0 ${size * 0.06}px ${size * 0.14}px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1), inset 0 -1px 0 rgba(0,0,0,.4)`,
       }}
     >
-      <div className="absolute -inset-1" style={{ background: "linear-gradient(115deg,transparent 42%,rgba(255,255,255,.14) 50%,transparent 58%)" }} />
-      <div className="absolute bottom-0 left-0 right-0" style={{ height: 3, background: item.rarity.color }} />
-      <WeaponGlyph type={item.type} color={item.rarity.color} size={size * 0.55} />
+      <div className="absolute" style={{
+        width: "140%", height: "140%", top: "-15%", left: "-10%",
+        background: `radial-gradient(45% 45% at 35% 25%, ${c}55, transparent 70%)`,
+      }} />
+      <div className="absolute inset-0" style={{ boxShadow: `inset 0 0 ${size * 0.35}px rgba(0,0,0,.45)`, borderRadius: size * 0.26 }} />
+      <div className="absolute -inset-1" style={{ background: "linear-gradient(115deg,transparent 38%,rgba(255,255,255,.20) 49%,rgba(255,255,255,.04) 56%,transparent 64%)" }} />
+      <div className="absolute" style={{ inset: 1.5, borderRadius: size * 0.24, border: "1px solid rgba(255,255,255,.08)", pointerEvents: "none" }} />
+      <div className="absolute bottom-0 left-0 right-0" style={{ height: Math.max(2.5, size * 0.055), background: `linear-gradient(90deg, transparent, ${c}, transparent)`, boxShadow: `0 0 ${size * 0.18}px ${c}` }} />
+      <WeaponGlyph type={item.type} color={c} size={size * 0.56} />
     </div>
   );
 }
