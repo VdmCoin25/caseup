@@ -38,16 +38,22 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
 
     const dur = fast ? 1.4 : 6.4;
     const el = trackRef.current;
+    // Web Animations API instead of manually flipping inline transition +
+    // forcing a reflow: some Telegram in-app WebViews don't reliably pick up
+    // that reflow trick, which is what was making the ribbon skip straight
+    // to the end. el.animate() is broadly supported and doesn't need it —
+    // and finishing the phase change in its own callback keeps the visual
+    // animation and the "it's done" moment perfectly in sync.
     if (el) {
-      el.style.transition = "none";
-      el.style.transform = "translateX(calc(50% + 0px))";
-      void el.offsetHeight;
-      requestAnimationFrame(() => {
-        const jitter = (Math.random() - 0.5) * (ITEM_W - 58);
-        const target = -(WIN_INDEX * ITEM_W + ITEM_W / 2) + jitter;
-        el.style.transition = `transform ${dur}s cubic-bezier(.09,.82,.05,1)`;
+      const jitter = (Math.random() - 0.5) * (ITEM_W - 58);
+      const target = -(WIN_INDEX * ITEM_W + ITEM_W / 2) + jitter;
+      const anim = el.animate(
+        [{ transform: "translateX(calc(50% + 0px))" }, { transform: `translateX(calc(50% + ${target}px))` }],
+        { duration: dur * 1000, easing: "cubic-bezier(.09,.82,.05,1)", fill: "forwards" }
+      );
+      anim.onfinish = () => {
         el.style.transform = `translateX(calc(50% + ${target}px))`;
-      });
+      };
     }
     timers.current.push(setTimeout(() => {
       busyRef.current = false;
