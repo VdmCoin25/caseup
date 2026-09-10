@@ -17,12 +17,6 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
   const trackRef = useRef(null);
   const timers = useRef([]);
   const rafRef = useRef(null);
-  // Guards against double-invocation from an accidental double-tap: React
-  // state (`phase`) doesn't update synchronously, so two clicks landing in
-  // the same tick before re-render can both slip past a `phase !== "idle"`
-  // check. This ref is set the instant the first click is handled, closing
-  // that window immediately — that's what was causing double charges and
-  // the reel animation getting stomped by a second, overlapping run.
   const busyRef = useRef(false);
 
   useEffect(() => () => { timers.current.forEach(clearTimeout); if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
@@ -41,12 +35,6 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
     const el = trackRef.current;
     const jitter = (Math.random() - 0.5) * (ITEM_W - 58);
     const target = -(WIN_INDEX * ITEM_W + ITEM_W / 2) + jitter;
-    // Neither CSS transitions nor the Web Animations API reliably animated
-    // inside Telegram's in-app browser on some devices — both silently
-    // skipped straight to the end state. This drives the ribbon by hand,
-    // one requestAnimationFrame at a time, setting the transform directly
-    // every frame. There's no simpler or more broadly-supported way to move
-    // something on screen, so if this doesn't animate, nothing will.
     const startTime = performance.now();
     const easeOutQuart = (t) => 1 - Math.pow(1 - t, 4);
     const step = (now) => {
@@ -59,8 +47,6 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
         busyRef.current = false;
         setPhase("result");
         if (winItem.rarity.min >= 900) { sfx.win(); setBurst((b) => b + 1); } else sfx.tap();
-        // The item is banked immediately, so it can never be lost by closing the
-        // modal or switching tabs. Selling later removes it again.
         addItem(winItem);
         onDrop && onDrop(winItem, active);
       }
@@ -83,7 +69,6 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
       setPhase("multiResult");
       wonItems.forEach((it, i) => {
         timers.current.push(setTimeout(() => setRevealed((r) => r + 1), 260 * (i + 1)));
-        // banked right away — closing the screen can't lose them
         addItem(it);
         onDrop && onDrop(it, active);
       });
@@ -98,7 +83,6 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
     qty === 1 ? openSingle() : openMulti();
   };
 
-  // The drop is already in the inventory; "keep" just closes, "sell" takes it back out.
   const keepOne = () => { sfx.tap(); setPhase("idle"); };
   const sellOne = () => {
     setCoins((c) => c + won.value);
@@ -126,12 +110,8 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
   const filtered = CASES.filter((c) => c.name.toLowerCase().includes(q.toLowerCase()));
   const multiTotal = multiWon.reduce((s, it) => s + it.value, 0);
 
-  // One representative item per pool tier, generated once per case (not on
-  // every render) so the preview stays stable while the player looks at it.
   const previewItems = useMemo(() => {
     if (!active) return [];
-    // Two rolls per rarity tier instead of one, so the preview actually
-    // looks like a case full of stuff rather than a bare price list.
     return [...active.pool]
       .sort((a, b) => a.seed - b.seed)
       .flatMap((tier, i) => [
@@ -164,6 +144,9 @@ function CasesScreen({ coins, setCoins, addItem, removeItem, onDrop }) {
   return (
     <div className="flex flex-col h-full px-4 pt-5 pb-2 relative overflow-y-auto">
       <TopBar sub="Кейс" title={active.name} onBack={() => phase === "idle" && setActive(null)} />
+      <div style={{ background: "#FF0000", color: "#fff", padding: "6px", textAlign: "center", fontWeight: "bold", fontSize: 13, marginBottom: 8, borderRadius: 8 }}>
+        TEST BUILD v3 — если видишь это, новый код загрузился
+      </div>
 
       <div className="flex flex-col items-center justify-center mb-1 relative" style={{ minHeight: 220 }}>
         <div className="absolute inset-0" style={{ background: `radial-gradient(55% 75% at 50% 45%, ${active.accent}22, transparent 72%)` }} />
