@@ -18,6 +18,20 @@ function AdminScreen({ initData }) {
   };
   useEffect(load, []);
 
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
+  const syncPrices = async () => {
+    setSyncing(true); setSyncMsg("");
+    try {
+      const r = await adminSync("sync_prices", initData, {});
+      setSyncMsg(`Готово: обновлено ${r.updated} из ${r.total}${r.failed ? `, не найдено ${r.failed}` : ""}`);
+    } catch (e) {
+      setSyncMsg("Ошибка: " + e.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const filtered = (players || []).filter((p) => {
     const s = q.toLowerCase();
     return !s || String(p.telegram_id).includes(s) || (p.first_name || "").toLowerCase().includes(s) || (p.username || "").toLowerCase().includes(s);
@@ -49,6 +63,18 @@ function AdminScreen({ initData }) {
       <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl" style={{ background: `${C.gold}1A`, border: `1px solid ${C.gold}44` }}>
         <ShieldCheck size={15} color={C.gold} />
         <span className="text-[11px]" style={{ color: C.gold }}>Доступ проверяется на сервере по твоему Telegram ID — у остальных этот экран не откроется, даже если найдут в коде</span>
+      </div>
+
+      <div className="rounded-2xl p-4 mb-4" style={{ background: C.bgElevated, border: `1px solid ${C.border}` }}>
+        <div className="text-[10px] tracking-[0.14em] uppercase mb-2" style={{ color: C.textDim }}>Справочные цены Steam</div>
+        <div className="text-[10px] mb-3" style={{ color: C.textDim }}>
+          Только для отображения — не влияет на выплаты в игре. Обновляется медленно (~1.5с на предмет) из-за лимитов Steam.
+        </div>
+        <button onClick={syncPrices} disabled={syncing} className="w-full rounded-xl py-3 font-bold"
+          style={{ background: C.bgCard, color: C.gold, border: `1px solid ${C.gold}55`, opacity: syncing ? 0.6 : 1 }}>
+          {syncing ? "Синхронизирую… (может занять минуту)" : "Обновить цены Steam"}
+        </button>
+        {syncMsg && <div className="text-[11px] mt-2" style={{ color: syncMsg.startsWith("Ошибка") ? C.danger : C.gold }}>{syncMsg}</div>}
       </div>
 
       <div className="rounded-2xl p-4 mb-4" style={{ background: C.bgElevated, border: `1px solid ${C.border}` }}>
